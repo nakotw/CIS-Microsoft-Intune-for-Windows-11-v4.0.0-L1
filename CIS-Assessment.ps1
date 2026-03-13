@@ -282,14 +282,24 @@ function Get-AuditFieldValue {
 
 function Get-AuditVariables {
     param([string]$AuditText)
+
     $vars = @{}
-    $matches = [regex]::Matches($AuditText, '(?ms)#\s*<variable>.*?#\s*</variable>')
+    $matches = [regex]::Matches($AuditText, '(?ims)^\s*#\s*<variable>\s*$.*?^\s*#\s*</variable>\s*$')
+
     foreach ($m in $matches) {
-        $block = $m.Value -replace '(?m)^#\s?', ''
-        $name = ([regex]::Match($block, '(?ms)<name>(.*?)</name>')).Groups[1].Value.Trim()
-        $default = ([regex]::Match($block, '(?ms)<default>(.*?)</default>')).Groups[1].Value.Trim()
-        if ($name) { $vars[$name] = $default }
+        $block = $m.Value -replace '(?m)^\s*#\s?', ''
+
+        $nameMatch = [regex]::Match($block, '(?ims)<name>(.*?)</name>')
+        $defaultMatch = [regex]::Match($block, '(?ims)<default>(.*?)</default>')
+
+        $name = $nameMatch.Groups[1].Value.Trim()
+        $default = $defaultMatch.Groups[1].Value.Trim()
+
+        if (-not [string]::IsNullOrWhiteSpace($name)) {
+            $vars[$name] = $default
+        }
     }
+
     return $vars
 }
 
