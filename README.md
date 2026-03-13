@@ -95,10 +95,6 @@ We welcome contributions to improve this assessment script! If you find issues, 
 
 Please ensure your contributions align with the project's purpose of assessing against the specified CIS Benchmark.
 
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details. <!-- TODO: Verify or add a LICENSE file -->
-
 ## 🙏 Acknowledgments
 
 -   **Center for Internet Security (CIS):** For providing the industry-standard security benchmarks that this script is based upon.
