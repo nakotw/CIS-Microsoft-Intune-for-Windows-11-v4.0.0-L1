@@ -443,39 +443,111 @@ function Test-RegistryItem {
     param([pscustomobject]$Item, [hashtable]$Variables)
 
     $expected = Resolve-AuditVariables $Item.ValueData $Variables
-    $regPath = if ($Item.Type -eq 'GUID_REGISTRY_SETTING' -and $Item.GuidRegKey) { $Item.GuidRegKey } else { $Item.RegKey }
-    $actual = Get-RegValue -Path $regPath -Name $Item.RegItem
-    if ($null -eq $actual -and $Item.Type -eq 'GUID_REGISTRY_SETTING' -and $Item.RegKey -and $Item.RegKey -notmatch '\{GUID\}') {
-        $actual = Get-RegValue -Path $Item.RegKey -Name $Item.RegItem
+
+    $regPath = if ($Item.Type -eq 'GUID_REGISTRY_SETTING' -and $Item.GuidRegKey) {
+        $Item.GuidRegKey
+    } else {
+        $Item.RegKey
     }
 
-    if ($null -eq $actual) {
-        return @{ Status='FAIL'; Actual='Not configured (null)'; Expected=$expected }
-    }
+    # -----------------------------
+    # ASR RULE VALIDATION
+    # -----------------------------
+    if ($regPath -match "AttackSurfaceReductionRules" -or $Item.Description -match "ASR") {
 
-    $actualText = if ($actual -is [array]) { $actual -join ', ' } else { [string]$actual }
-    $status = 'FAIL'
+        try {
 
-    switch ($Item.CheckType) {
-        'CHECK_REGEX' {
-            $status = if ($actualText -match $expected) { 'PASS' } else { 'FAIL' }
+            $mp = Get-MpPreference
+
+            $ids = @($mp.AttackSurfaceReductionRules_Ids)
+            $actions = @($mp.AttackSurfaceReductionRules_Actions)
+
+            $guidMatch = [regex]::Match($expected, '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
+            $guid = $guidMatch.Value.ToLower()
+
+            if ([string]::IsNullOrWhiteSpace($guid)) {
+                if ($Item.Description -match '([0-9a-fA-F-]{36})') {
+                    $guid = $Matches[1]
+                }
+            }
+
+            if ($guid) {
+
+                $guid = $guid.ToLower()
+
+                for ($i = 0; $i -lt $ids.Count; $i++) {
+
+                    if ($ids[$i].ToLower() -eq $guid) {
+
+                        $action = [int]$actions[$i]
+
+                        $actionLabel = switch ($action) {
+                            1 { "Block" }
+                            2 { "Audit" }
+                            6 { "Warn" }
+                            default { "Disabled" }
+                        }
+
+                        return @{
+                            Status   = if ($action -eq 1) { "PASS" } else { "FAIL" }
+                            Actual   = $actionLabel
+                            Expected = $expected
+                        }
+                    }
+                }
+
+                return @{
+                    Status   = "FAIL"
+                    Actual   = "ASR rule not configured"
+                    Expected = $expected
+                }
+            }
         }
-        'CHECK_NOT_REGEX' {
-            $status = if ($actualText -notmatch $expected) { 'PASS' } else { 'FAIL' }
-        }
-        'CHECK_NOT_EQUAL' {
-            $status = if ($actualText -ne $expected) { 'PASS' } else { 'FAIL' }
-        }
-        default {
-            if ($Item.ValueType -eq 'POLICY_DWORD') {
-                $status = if ([string]$actual -eq [string]$expected) { 'PASS' } else { 'FAIL' }
-            } else {
-                $status = if ($actualText -eq $expected) { 'PASS' } else { 'FAIL' }
+        catch {
+            return @{
+                Status   = "FAIL"
+                Actual   = "Error reading Defender configuration"
+                Expected = $expected
             }
         }
     }
 
-    return @{ Status=$status; Actual=$actualText; Expected=$expected }
+    # -----------------------------
+    # NORMAL REGISTRY CHECK
+    # -----------------------------
+    $actual = Get-RegValue -Path $regPath -Name $Item.RegItem
+
+    if ($null -eq $actual) {
+        return @{
+            Status   = "FAIL"
+            Actual   = "Not configured (null)"
+            Expected = $expected
+        }
+    }
+
+    $actualText = if ($actual -is [array]) { $actual -join ", " } else { [string]$actual }
+
+    $status = "FAIL"
+
+    switch ($Item.CheckType) {
+        "CHECK_REGEX"     { $status = if ($actualText -match $expected) { "PASS" } else { "FAIL" } }
+        "CHECK_NOT_REGEX" { $status = if ($actualText -notmatch $expected) { "PASS" } else { "FAIL" } }
+        "CHECK_NOT_EQUAL" { $status = if ($actualText -ne $expected) { "PASS" } else { "FAIL" } }
+        default {
+            if ($Item.ValueType -eq "POLICY_DWORD") {
+                $status = if ([string]$actual -eq [string]$expected) { "PASS" } else { "FAIL" }
+            }
+            else {
+                $status = if ($actualText -eq $expected) { "PASS" } else { "FAIL" }
+            }
+        }
+    }
+
+    return @{
+        Status   = $status
+        Actual   = $actualText
+        Expected = $expected
+    }
 }
 
 function Test-RegCheckItem {
