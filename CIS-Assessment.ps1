@@ -1,11 +1,10 @@
 #Requires -RunAsAdministrator
 <#!
 .SYNOPSIS
-  Full benchmark-style local machine auditor for CIS Microsoft Intune for Windows 11 v4.0.0 L1.
+  Full benchmark-style local machine auditor for CIS Microsoft Intune for Windows 11.
 
 .DESCRIPTION
   Parses the supplied Tenable/Nessus .audit file and evaluates every supported custom_item
-  locally on the endpoint. This version is designed for the uploaded CIS_Microsoft_Intune_for_Windows_11_v4.0.0_L1.audit.
 
   Supported item types in this benchmark:
     - REGISTRY_SETTING
@@ -29,10 +28,27 @@
 #>
 
 param(
-    [string]$AuditFilePath = "/mnt/data/CIS_Microsoft_Intune_for_Windows_11_v4.0.0_L1.audit",
-    [string]$OutputDirectory = "C:\Temp\CIS_Intune_W11_v4_Audit",
-    [switch]$DoNotOpenReport
+    [string]$AuditFilePath,
+    [string]$OutputDirectory = "C:\Temp\CIS_Audit"
 )
+
+if (-not $AuditFilePath) {
+
+    Add-Type -AssemblyName System.Windows.Forms
+
+    $FileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $FileDialog.Title = "Select CIS .audit file"
+    $FileDialog.Filter = "Audit files (*.audit)|*.audit"
+    $FileDialog.InitialDirectory = Get-Location
+
+    if ($FileDialog.ShowDialog() -eq "OK") {
+        $AuditFilePath = $FileDialog.FileName
+    }
+    else {
+        Write-Host "No audit file selected. Exiting." -ForegroundColor Yellow
+        exit
+    }
+}
 
 $ErrorActionPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Web -ErrorAction SilentlyContinue
@@ -760,7 +776,7 @@ body.light .top-filter-btn.active{color:#fff}
 </style>
 </head>
 <body class="dark">
-<div class="topbar"><div class="container"><div class="topbar-inner"><div class="brand"><div class="brand-mark">🛡</div><div class="brand-text"><h1>CIS Intune Windows 11 Assessment</h1><p>v4.0.0 · Level 1 · Full local parser-based benchmark audit</p></div></div><div class="top-actions"><div class="toolbar-pill">Host: <strong>$computerName</strong></div><div class="toolbar-pill">Build: <strong>$osBuild</strong></div><button id="themeToggle" class="theme-toggle" type="button">☀ Light mode</button><div class="toolbar-filter"><button class="top-filter-btn active" data-filter="ALL" type="button">All</button><button class="top-filter-btn" data-filter="PASS" type="button">Pass</button><button class="top-filter-btn" data-filter="FAIL" type="button">Fail</button><button class="top-filter-btn" data-filter="OTHER" type="button">Other</button></div><label class="toolbar-search" for="globalSearch"><span>🔎</span><input id="globalSearch" type="text" placeholder="Search control ID, title, actual, expected, remediation, type..." /></label></div></div></div></div>
+<div class="topbar"><div class="container"><div class="topbar-inner"><div class="brand"><div class="brand-mark">🛡</div><div class="brand-text"><h1>CIS Intune Windows 11 Assessment</h1><p><p>Full local parser-based benchmark audit</p></p></div></div><div class="top-actions"><div class="toolbar-pill">Host: <strong>$computerName</strong></div><div class="toolbar-pill">Build: <strong>$osBuild</strong></div><button id="themeToggle" class="theme-toggle" type="button">☀ Light mode</button><div class="toolbar-filter"><button class="top-filter-btn active" data-filter="ALL" type="button">All</button><button class="top-filter-btn" data-filter="PASS" type="button">Pass</button><button class="top-filter-btn" data-filter="FAIL" type="button">Fail</button><button class="top-filter-btn" data-filter="OTHER" type="button">Other</button></div><label class="toolbar-search" for="globalSearch"><span>🔎</span><input id="globalSearch" type="text" placeholder="Search control ID, title, actual, expected, remediation, type..." /></label></div></div></div></div>
 <div class="container">
 <section class="hero"><div class="hero-card"><div class="hero-grid"><div><div class="eyebrow">Advanced Local Machine Audit</div><h2>$benchName</h2><p class="lead">Full benchmark-style parser using the Tenable .audit file directly, with local registry, audit policy, user-rights, local account, banner, and embedded PowerShell validation.</p><div class="meta-grid"><div class="meta-card"><div class="meta-label">Hostname</div><div class="meta-value">$computerName</div></div><div class="meta-card"><div class="meta-label">Operating System</div><div class="meta-value">$osCaption</div></div><div class="meta-card"><div class="meta-label">OS Build</div><div class="meta-value">$osBuild</div></div><div class="meta-card"><div class="meta-label">Run As</div><div class="meta-value">$runAsUser</div></div><div class="meta-card"><div class="meta-label">Assessment Date</div><div class="meta-value">$reportDate</div></div></div></div><div class="hero-side"><div class="score-card"><div class="score-head"><div class="label">Overall Compliance</div><div class="score-state $healthClass">$healthLabel</div></div><div class="score-main"><div class="radial-wrap"><div class="radial-ring"></div><div class="radial-value"><div><div class="big">${scorePercent}%</div><div class="small">Score</div></div></div></div><div class="score-copy"><h3>$passCount of $totalChecks controls passed</h3><p>Failing controls are expanded automatically. Use global search and category filters to review the benchmark quickly.</p></div></div></div><div class="kpi-grid"><div class="kpi total"><div class="kpi-label">Total</div><div class="kpi-value">$totalChecks</div></div><div class="kpi pass"><div class="kpi-label">Passed</div><div class="kpi-value">$passCount</div></div><div class="kpi fail"><div class="kpi-label">Failed</div><div class="kpi-value">$failCount</div></div><div class="kpi manual"><div class="kpi-label">Other</div><div class="kpi-value">$manualCount</div></div><div class="kpi sec"><div class="kpi-label">Categories</div><div class="kpi-value">$categoryCount</div></div></div></div></div></div></section>
 <section class="layout"><aside class="sidebar"><div class="side-card"><div class="side-title">Categories</div><div class="jump-list">$summaryCards</div></div></aside><main class="content">$sectionHtml</main></section>
