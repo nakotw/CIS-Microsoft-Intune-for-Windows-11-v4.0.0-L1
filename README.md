@@ -64,7 +64,7 @@ The script helps organizations quickly identify configurations that deviate from
 
 4.  **Execute the assessment script:**
     ```powershell
-    .\CIS-Assessment.ps1 -AuditFilePath .\CIS_Microsoft_Intune_for_Windows_11_v4.0.0_L1.audit `-OutputDirectory "C:\Temp\CIS_Intune_W11_v4_Audit"
+    .\CIS-Assessment.ps1 -AuditFilePath .\CIS_Microsoft_Intune_for_Windows_11_v4.0.0_L1.audit -OutputDirectory "C:\Temp\CIS_Intune_W11_v4_Audit"
     ```
     The script will run through the checks and display the assessment results in the console.
 
